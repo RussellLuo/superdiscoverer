@@ -32,36 +32,37 @@ func (sd *Superdiscoverer) Discover() error {
 		}
 		log.Printf("headers: %+v, event: %+v\n", headers, event)
 
-		var service *Service
-		for _, ts := range sd.targetServices {
-			if ts.Name == event.ProcessName {
-				service = &ts
-				break
-			}
-		}
-		// Ignore the current process if it is not the target service
-		if service == nil {
-			goto Continue
-		}
-
-		switch event.Type {
-		case EventTypeProcessStateRunning:
-			// Register the current service *ONLY* when its state
-			// has moved from STARTING to RUNNING
-			if err := sd.registrator.Register(service); err != nil {
-				log.Printf("Error: %v\n", err)
-			}
-		case EventTypeProcessStateStopping:
-			if event.FromState == FromStateRunning {
-				// Deregister the current service *ONLY* when its state
-				// has moved from RUNNING to STOPPING
-				if err := sd.registrator.Deregister(service.ID()); err != nil {
-					log.Printf("Error: %v\n", err)
+		go func() {
+			var service *Service
+			for _, ts := range sd.targetServices {
+				if ts.Name == event.ProcessName {
+					service = &ts
+					break
 				}
 			}
-		}
+			// Ignore the current process if it is not the target service
+			if service == nil {
+				return
+			}
 
-	Continue:
+			switch event.Type {
+			case EventTypeProcessStateRunning:
+				// Register the current service *ONLY* when its state
+				// has moved from STARTING to RUNNING
+				if err := sd.registrator.Register(service); err != nil {
+					log.Printf("Error: %v\n", err)
+				}
+			case EventTypeProcessStateStopping:
+				if event.FromState == FromStateRunning {
+					// Deregister the current service *ONLY* when its state
+					// has moved from RUNNING to STOPPING
+					if err := sd.registrator.Deregister(service.ID()); err != nil {
+						log.Printf("Error: %v\n", err)
+					}
+				}
+			}
+		}()
+
 		if err := sd.eventListener.OK(); err != nil {
 			return err
 		}
