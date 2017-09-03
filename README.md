@@ -1,6 +1,6 @@
 # Superdiscoverer
 
-A [Supervisor](http://supervisord.org/) backed service discoverer, which will automatically registers and deregisters services according to the corresponding event notifications sent by Supervisor.
+A [Supervisor](http://supervisord.org/) backed service discoverer, which will automatically register and deregister services according to the corresponding event notifications sent by Supervisor.
 
 Superdiscoverer supports pluggable service registries, which currently only includes [Consul](http://www.consul.io/).
 

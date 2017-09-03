@@ -175,7 +175,7 @@ func (el *EventListener) result(data string) error {
 	return el.send([]byte(resultToken))
 }
 
-// Wait waits for an event notification from Supervisor.
+// Wait waits for an event notification sent by Supervisor.
 func (el *EventListener) Wait() (*header, *Event, error) {
 	if err := el.ready(); err != nil {
 		return nil, nil, err

@@ -22,8 +22,8 @@ func New(eventlistener *EventListener, targetServices []Service, registrator Reg
 	}
 }
 
-// Discover runs the superdiscoverer forever to listen to the event
-// notifications from Supervisor, until an error occurs.
+// Discover runs forever to listen for event notifications
+// sent by Supervisor, until an error occurs.
 func (sd *Superdiscoverer) Discover() error {
 	for {
 		headers, event, err := sd.eventListener.Wait()
@@ -40,7 +40,8 @@ func (sd *Superdiscoverer) Discover() error {
 					break
 				}
 			}
-			// Ignore the current process if it is not the target service
+			// Ignore the current event if the corresponding process
+			// is not the target service
 			if service == nil {
 				return
 			}
