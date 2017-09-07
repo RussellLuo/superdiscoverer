@@ -1,6 +1,7 @@
 package consul
 
 import (
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -9,15 +10,7 @@ import (
 	"github.com/hashicorp/consul/api"
 )
 
-// Consul is a Consul backed service registrator implementation.
-type Consul struct {
-	agent  *api.Agent
-	config *Config
-
-	mu          sync.Mutex
-	deregisters map[string]func() error
-}
-
+// Config is a configuration used to customize the health check behavior.
 type Config struct {
 	TTL                            string `json:"ttl,omitempty"`
 	UpdateTTLInterval              string `json:"update_interval,omitempty"`
@@ -28,6 +21,7 @@ type Config struct {
 	dDeregisterCriticalServiceAfter time.Duration `json:"-"`
 }
 
+// Normalize parses user specified configuration, and set default values if necessary.
 func (c *Config) Normalize() error {
 	if c.TTL == "" {
 		c.TTL = "3s"
@@ -53,6 +47,19 @@ func (c *Config) Normalize() error {
 	return nil
 }
 
+// deregisterFunc is a deregister handler.
+type deregisterFunc func() error
+
+// Consul is a Consul backed service registrator implementation.
+type Consul struct {
+	agent  *api.Agent
+	config *Config
+
+	mu          sync.Mutex
+	deregisters map[string]deregisterFunc
+}
+
+// New creates a Consul backed service registrator.
 func New(address string, config *Config) (*Consul, error) {
 	client, err := api.NewClient(&api.Config{Address: address})
 	if err != nil {
@@ -63,14 +70,12 @@ func New(address string, config *Config) (*Consul, error) {
 	return &Consul{
 		agent:       client.Agent(),
 		config:      config,
-		deregisters: make(map[string]func() error),
+		deregisters: make(map[string]deregisterFunc),
 	}, nil
 }
 
 // Register registers the current service to Consul.
 func (c *Consul) Register(service *sd.Service) error {
-	var ()
-
 	s := &api.AgentServiceRegistration{
 		ID:      service.ID(),
 		Name:    service.Name,
@@ -108,6 +113,7 @@ func (c *Consul) Register(service *sd.Service) error {
 		}
 	}()
 
+	// Save the deregister handler for the current service for later use
 	c.mu.Lock()
 	c.deregisters[service.ID()] = func() error {
 		if err := c.agent.ServiceDeregister(service.ID()); err != nil {
@@ -129,13 +135,15 @@ func (c *Consul) Deregister(serviceID string) error {
 
 	deregister, ok := c.deregisters[serviceID]
 	if !ok {
-		return nil
+		return fmt.Errorf("Found no deregister handler for service %s", serviceID)
 	}
 
 	if err := deregister(); err != nil {
 		return err
 	}
-	// Remove the current deregister from the map only after deregistering succeeds.
+
+	// Remove the current deregister from the map only after deregistering succeeds
 	delete(c.deregisters, serviceID)
+
 	return nil
 }
