@@ -9,17 +9,27 @@ import (
 // according to the corresponding events notified by Supervisor.
 type Superdiscoverer struct {
 	eventListener  *EventListener
-	targetServices []Service
+	targetServices []*Service
 	registrator    Registrator
 }
 
 // New creates a superdiscoverer.
-func New(eventlistener *EventListener, targetServices []Service, registrator Registrator) *Superdiscoverer {
+func New(eventlistener *EventListener, targetServices []*Service, registrator Registrator) *Superdiscoverer {
 	return &Superdiscoverer{
 		eventListener:  eventlistener,
 		targetServices: targetServices,
 		registrator:    registrator,
 	}
+}
+
+// findTargetService finds the target service that matches the given event.
+func (sd *Superdiscoverer) findTargetService(event *Event) *Service {
+	for _, ts := range sd.targetServices {
+		if ts.Name == event.GroupName+":"+event.ProcessName {
+			return ts
+		}
+	}
+	return nil
 }
 
 // Discover runs forever to listen for event notifications
@@ -33,13 +43,7 @@ func (sd *Superdiscoverer) Discover() error {
 		log.Printf("headers: %+v, event: %+v\n", headers, event)
 
 		go func() {
-			var service *Service
-			for _, ts := range sd.targetServices {
-				if ts.Name == event.ProcessName {
-					service = &ts
-					break
-				}
-			}
+			service := sd.findTargetService(event)
 			// Ignore the current event if the corresponding process
 			// is not the target service
 			if service == nil {
