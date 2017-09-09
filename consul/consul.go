@@ -74,7 +74,7 @@ func New(address string, config *Config) (*Consul, error) {
 	}, nil
 }
 
-// Register registers the current service to Consul.
+// Register registers the given service to Consul.
 func (c *Consul) Register(service *sd.Service) error {
 	s := &api.AgentServiceRegistration{
 		ID:      service.ID(),
@@ -106,17 +106,17 @@ func (c *Consul) Register(service *sd.Service) error {
 				close(closed)
 				return
 			case <-t.C:
-				if err := c.agent.UpdateTTL("service:"+service.ID(), "", api.HealthPassing); err != nil {
+				if err := c.agent.UpdateTTL("service:"+s.ID, "", api.HealthPassing); err != nil {
 					log.Printf("Error: %v\n", err)
 				}
 			}
 		}
 	}()
 
-	// Save the deregister handler for the current service for later use
+	// Save the deregister handler for the given service for later use
 	c.mu.Lock()
-	c.deregisters[service.ID()] = func() error {
-		if err := c.agent.ServiceDeregister(service.ID()); err != nil {
+	c.deregisters[s.ID] = func() error {
+		if err := c.agent.ServiceDeregister(s.ID); err != nil {
 			return err
 		}
 		close(closing)
@@ -128,12 +128,14 @@ func (c *Consul) Register(service *sd.Service) error {
 	return nil
 }
 
-// Deregister deregisters the current service from Consul.
+// Deregister deregisters the given service from Consul.
 func (c *Consul) Deregister(serviceID string) error {
+	// Pop the deregister handler for the given service
 	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	deregister, ok := c.deregisters[serviceID]
+	delete(c.deregisters, serviceID)
+	c.mu.Unlock()
+
 	if !ok {
 		return fmt.Errorf("Found no deregister handler for service %s", serviceID)
 	}
@@ -141,9 +143,5 @@ func (c *Consul) Deregister(serviceID string) error {
 	if err := deregister(); err != nil {
 		return err
 	}
-
-	// Remove the current deregister from the map only after deregistering succeeds
-	delete(c.deregisters, serviceID)
-
 	return nil
 }
