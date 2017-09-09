@@ -57,7 +57,7 @@ func (sd *Superdiscoverer) Discover() error {
 				if err := sd.registrator.Register(service); err != nil {
 					log.Printf("Error: %v\n", err)
 				}
-			case EventTypeProcessStateStopping:
+			case EventTypeProcessStateStopping, EventTypeProcessStateExited:
 				if event.FromState == FromStateRunning {
 					// Deregister the current service *ONLY* when its state
 					// has moved from RUNNING to STOPPING

@@ -15,6 +15,7 @@ const (
 
 	EventTypeProcessStateRunning  = "PROCESS_STATE_RUNNING"
 	EventTypeProcessStateStopping = "PROCESS_STATE_STOPPING"
+	EventTypeProcessStateExited   = "PROCESS_STATE_EXITED"
 
 	FromStateRunning = "RUNNING"
 )
@@ -70,8 +71,11 @@ func newHeader(tokens map[string]string) (*header, error) {
 }
 
 // Event represents a Supervisor event payload, whose event type
-// is PROCESS_STATE_RUNNING or PROCESS_STATE_STOPPING, we only
-// need to care about these two event types for automatic service-discovery.
+// is PROCESS_STATE_RUNNING or PROCESS_STATE_STOPPING or PROCESS_STATE_EXITED,
+// we only need to care about these three event types for automatic service-discovery.
+//
+// Note that for simplicity, we ignore the extra `expected` field of
+// event PROCESS_STATE_EXITED.
 type Event struct {
 	Type        string
 	ProcessName string

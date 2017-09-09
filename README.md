@@ -26,7 +26,7 @@ then a typical Supervisor configuration is as follows:
 ```
 [eventlistener:superdiscoverer]
 command=$GOPATH/bin/superdiscoverer --target=test@127.0.0.1:8000 --registrator=consul@127.0.0.1:8500
-events=PROCESS_STATE_RUNNING,PROCESS_STATE_STOPPING
+events=PROCESS_STATE_RUNNING,PROCESS_STATE_STOPPING,PROCESS_STATE_EXITED
 stdout_logfile=$LOGPATH/supervisor/logs/superdiscoverer/stdout.log
 stderr_logfile=$LOGPATH/supervisor/logs/superdiscoverer/stderr.log
 ```
